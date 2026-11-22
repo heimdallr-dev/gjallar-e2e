@@ -1,0 +1,32 @@
+# Every optional feature on, for verification on the kind cluster.
+# kind/setup-all.sh passes this after gjallar-helm/charts/gjallar/values-kind.yaml.
+auth:
+  issuer: http://keycloak.keycloak.svc:8080/realms/gjallar
+keda: { enabled: true }
+tenancy:
+  groups: { team-demo: [demo] }
+notify:
+  existingSecret: gjallar-notify
+discovery:
+  interval: 10m
+  harbor:
+    url: https://harbor.example.org
+    projects: [gjallar]
+    existingSecret: harbor-discovery
+workers:
+  registryAuthSecret: harbor-gjallar
+  sbom:
+    attest:
+      repositories: [registry.gjallar-test.svc:5000/]
+      keySecret: cosign-key
+      insecure: true
+  patch:
+    enabled: true
+    targetRepository: registry.gjallar-test.svc:5000/patched
+buildkit:
+  config: |
+    [registry."registry.gjallar-test.svc:5000"]
+      http = true
+agent:
+  regolibrary: { enabled: true }
+  runtime: { enabled: true }
