@@ -9,7 +9,13 @@ CORE=$(realpath "${CORE:-../gjallar}")   # github.com/heimdallr-dev/gjallar
 PW_VERSION=1.49.1
 OUT=${OUT:-browser/out}
 mkdir -p "$OUT"
-(cd "$CORE" && CGO_ENABLED=0 go build -mod=vendor -o "$OLDPWD/$OUT/gjallar" ./cmd/gjallar)
+if command -v go >/dev/null; then
+  (cd "$CORE" && CGO_ENABLED=0 go build -mod=vendor -o "$OLDPWD/$OUT/gjallar" ./cmd/gjallar)
+else # no Go toolchain: build in a container (containerd via nerdctl, or Docker)
+  C=$(command -v docker || echo "sudo -n nerdctl --namespace default")
+  $C run --rm -v "$CORE:/src:ro" -v "$(realpath "$OUT"):/out" -w /src -e CGO_ENABLED=0 -e GOFLAGS=-mod=vendor \
+    golang:1.26.11 go build -buildvcs=false -o /out/gjallar ./cmd/gjallar
+fi
 
 kubectl -n gjallar delete pod pwtest --ignore-not-found --wait >/dev/null
 kubectl -n gjallar run pwtest --restart=Never --image="mcr.microsoft.com/playwright:v${PW_VERSION}-noble" \
